@@ -1,6 +1,7 @@
+package ru.danis.dbms.model;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.util.*;
 
 public class TableSchema {

@@ -1,6 +1,7 @@
+package ru.danis.dbms.storage;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.time.Instant;
 
 public class WalEntry {

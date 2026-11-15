@@ -1,3 +1,7 @@
+package ru.danis.dbms.storage;
+
+import ru.danis.dbms.model.Row;
+
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
