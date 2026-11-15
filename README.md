@@ -28,7 +28,9 @@
   - **DAO / Storage Engine**: `StorageEngine` / `FileStorageEngine` — дисковая персистентность таблиц и индексов в JSON с атомарной перезаписью файлов (`.tmp` + `ATOMIC_MOVE`).
   - **Write-Ahead Logging (WAL)**: `wal.log` и `WalEntry` — упреждающая фиксация изменений, контрольные точки `checkpoint()` и автоматическое восстановление/реконсиляция при запуске.
 
-### Диаграмма классов
+### Диаграммы классов
+
+#### 1. Ядро базы данных, репозитории и подсистема хранения
 ```mermaid
 classDiagram
     direction TB
@@ -135,6 +137,67 @@ classDiagram
     Index <|.. BTreeIndex
 ```
 
+#### 2. Лексический, синтаксический анализ и AST-модель выражений
+```mermaid
+classDiagram
+    direction TB
+
+    class SqlLexer {
+        -String input
+        -int pos
+        +nextToken() Token
+    }
+
+    class Token {
+        +TokenType type
+        +String value
+    }
+
+    class SqlParser {
+        -SqlLexer lexer
+        -Token currentToken
+        +parse() Statement
+    }
+
+    class Statement {
+        <<interface>>
+        +getType() StatementType
+    }
+
+    class SelectStatement {
+        -String tableName
+        -List~String~ columns
+        -Condition whereCondition
+    }
+
+    class InsertStatement {
+        -String tableName
+        -List~String~ columns
+        -List~List~Object~~ valuesBatch
+    }
+
+    class CreateTableStatement {
+        -TableSchema schema
+    }
+
+    class Condition {
+        -String column
+        -ComparisonOperator operator
+        -Object value
+        -Condition left
+        -Condition right
+        +evaluate(Row row) boolean
+    }
+
+    SqlParser --> SqlLexer
+    SqlLexer --> Token
+    SqlParser ..> Statement : produces
+    Statement <|.. SelectStatement
+    Statement <|.. InsertStatement
+    Statement <|.. CreateTableStatement
+    SelectStatement o-- Condition
+```
+
 ### Диаграммы последовательностей
 
 #### 1. Выполнение запроса SELECT с оптимизацией через B-Tree индекс
@@ -147,7 +210,7 @@ sequenceDiagram
     participant Repo as FileTableRepository
     participant Index as BTreeIndex
 
-    User->>Engine: execute("SELECT brand, price FROM cars WHERE brand = 'Toyota';")
+    User->>Engine: execute("SELECT brand, price FROM cars WHERE brand = 'Toyota'")
     Engine->>Repo: getIndexForColumn("brand")
     Repo-->>Engine: BTreeIndex (idx_cars_brand)
     Engine->>Plan: new IndexScanPlan(Repo, Index, "Toyota", ["brand", "price"])
@@ -170,7 +233,7 @@ sequenceDiagram
     participant Storage as FileStorageEngine
     participant Index as BTreeIndex
 
-    User->>Engine: execute("INSERT INTO cars VALUES (1, 'Toyota', 25000.0, true, '2024-01-15', 1);")
+    User->>Engine: execute("INSERT INTO cars VALUES (1, 'Toyota', 25000.0, true, '2024-01-15', 1)")
     Engine->>Repo: insert(row)
     Note over Repo: Проверка типов, NOT NULL, уникальности PK и связей FK
     Repo->>Storage: appendWal("INSERT", "cars", "pk=1")
